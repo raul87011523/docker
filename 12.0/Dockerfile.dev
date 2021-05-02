@@ -1,0 +1,138 @@
+FROM ubuntu:20.04
+MAINTAINER Odoo S.A. <info@odoo.com>
+
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+
+# SET ARGs
+
+## If the CODE_VERSION variable is not initialized, the latest version of code-server is downloaded. 
+## To date, the latest version is 3.5.0, but it has a problem with the execution of code-server commands in the terminal, so I specify version 3.4.1, which works well
+## CODE_RELEASE contains the path of the version to download, which does not always match with the name of the installer, for example:
+## https://github.com/cdr/code-server/releases/download/$CODE_RELEASE/code-server-$CODE_VERSION-linux-x86_64.tar.gz
+## If CODE_RELEASE="v3.5.0" and CODE_VERSION="3.5.0" we would obtain
+## https://github.com/cdr/code-server/releases/download/v3.5.0/code-server-3.5.0-linux-x86_64.tar.gz
+## I have updated the version to 3.9.1, this one works fine
+ARG CODE_VERSION="3.9.1"
+ARG CODE_RELEASE="3.9.1"
+
+# environment settings
+ENV HOME="/home/config"
+
+# Generate locale C.UTF-8 for postgres and general locale data
+ENV LANG C.UTF-8
+
+# INstall and config tzdata
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install tzdata
+ENV TZ=America/Argentina/Buenos_Aires
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN dpkg-reconfigure --frontend noninteractive tzdata
+
+# Install some deps, lessc and less-plugin-clean-css, and wkhtmltopdf
+RUN apt-get update \
+        && apt-get install -y --no-install-recommends \
+            sudo \
+            vim \
+            ripgrep \
+            npm \
+            build-essential \
+            swig \
+            git \
+            ca-certificates \
+            curl \
+            dirmngr \
+            fonts-noto-cjk \
+            gnupg \
+            libssl-dev \
+            node-less \
+            python3-num2words \
+            python3-pip \
+            python3-phonenumbers \
+            python3-pyldap \
+            python3-qrcode \
+            python3-renderpm \
+            python3-setuptools \
+            python3-slugify \
+            python3-vobject \
+            python3-watchdog \
+            python3-xlrd \
+            python3-xlwt \
+            xz-utils \
+            python3-dev \
+            python3-wheel \
+        && curl -o wkhtmltox.deb -sSL https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.focal_amd64.deb \
+        && apt-get install -y --no-install-recommends ./wkhtmltox.deb \
+        && rm -rf /var/lib/apt/lists/* wkhtmltox.deb \
+        && git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install --all
+
+# Install extra libs
+RUN pip3 install -U debugpy pysftp polib unicodecsv unidecode email_validator erppeek pylint
+
+# install latest postgresql-client
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y postgresql postgresql-contrib
+
+# Install rtlcss
+RUN npm install -g rtlcss
+
+# Install Odoo
+ENV ODOO_VERSION 12.0
+ARG ODOO_RELEASE=20210427
+ARG ODOO_SHA=9e00c380b73efce6b164c2a0d7127de65feed2e3
+RUN curl -o odoo.deb -sSL http://nightly.odoo.com/${ODOO_VERSION}/nightly/deb/odoo_${ODOO_VERSION}.${ODOO_RELEASE}_all.deb \
+        && echo "${ODOO_SHA} odoo.deb" | sha1sum -c - \
+        && apt-get update \
+        && apt-get -y install --no-install-recommends ./odoo.deb \
+        && rm -rf /var/lib/apt/lists/* odoo.deb
+
+# Install code-server
+RUN \
+  if [ -z ${CODE_VERSION+x} ]; then \ 
+  	VERSION="$(curl -fsSLI -o /dev/null -w "%{url_effective}" https://github.com/cdr/code-server/releases/latest)"; \
+  	VERSION="${VERSION#https://github.com/cdr/code-server/releases/tag/}"; \
+	CODE_VERSION="${VERSION#v}"; \
+	CODE_RELEASE="${VERSION}"; \
+  fi \
+  && curl -o "/opt/code-server-$CODE_VERSION-linux-amd64.tar.gz" -sSL "https://github.com/cdr/code-server/releases/download/v$CODE_RELEASE/code-server-$CODE_VERSION-linux-amd64.tar.gz" \ 
+  && tar -xvzf /opt/code-server-$CODE_VERSION-linux-amd64.tar.gz -C /opt \
+  && rm -rf /opt/code-server-$CODE_VERSION-linux-amd64.tar.gz \
+  && chown -R odoo /opt/code-server-$CODE_VERSION-linux-amd64 \
+  && ln -s /opt/code-server-$CODE_VERSION-linux-amd64/bin/code-server /usr/local/bin/code-server \
+  && ln -s /opt/code-server-$CODE_VERSION-linux-amd64/lib/node /usr/local/lib/node \
+  && ln -s /opt/code-server-$CODE_VERSION-linux-amd64/lib/vscode /usr/local/lib/vscode \
+  && chown -R odoo:odoo /opt/code-server-$CODE_VERSION-linux-amd64
+
+# Copy entrypoint script and Odoo configuration file
+COPY ./entrypoint.sh /
+COPY ./odoo.conf /etc/odoo/
+
+#Creation of /mnt/extra-addons directory for user addons
+RUN mkdir -p /mnt/extra-addons  \
+    && mkdir -p /home/config 
+
+#Set permissions
+ARG PUID=1000
+ARG PGID=1000
+
+RUN groupmod -o -g "$PGID" odoo \
+    && usermod -o -u "$PUID" odoo \
+    && echo "odoo ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers \
+    && echo -e  "odoo\nodoo" | passwd odoo \
+    && chown -R odoo:odoo /home/config \
+    && chown -R odoo:odoo /mnt/extra-addons
+
+# Mount /var/lib/odoo to allow restoring filestore, /mnt/extra-addons for users addons and config for configurations files
+VOLUME ["/var/lib/odoo", "/mnt/extra-addons", "/home/config"]
+
+# Expose Odoo services
+EXPOSE 8069 8071 8072
+
+# Set the default config file
+ENV ODOO_RC /etc/odoo/odoo.conf
+
+COPY wait-for-psql.py /usr/local/bin/wait-for-psql.py
+
+# Set default user when running the container
+USER odoo
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["odoo"]
