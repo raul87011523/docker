@@ -54,12 +54,12 @@ case "$1" in
     code-server)
         exec code-server \
 		--bind-addr 0.0.0.0:8443 \
-		--user-data-dir /home/config/data \
-		--extensions-dir /home/config/.local/share/code-server/extensions \
+		--user-data-dir /home/odoo/data \
+		--extensions-dir /home/odoo/.local/share/code-server/extensions \
 		--disable-telemetry \
 		--auth "${AUTH}" \
 		"${PROXY_DOMAIN_ARG}" \
-		/home/config/workspace
+		/home/odoo/workspace
 		;;
     *)
         exec "$@"

@@ -16,7 +16,7 @@ ARG CODE_VERSION="3.9.1"
 ARG CODE_RELEASE="3.9.1"
 
 # environment settings
-ENV HOME="/home/config"
+ENV HOME="/home/odoo"
 
 # Generate locale C.UTF-8 for postgres and general locale data
 ENV LANG C.UTF-8
@@ -106,22 +106,23 @@ COPY ./entrypoint.sh /
 COPY ./odoo.conf /etc/odoo/
 
 #Creation of /mnt/extra-addons directory for user addons
-RUN mkdir -p /mnt/extra-addons  \
-    && mkdir -p /home/config 
+RUN mkdir -p /mnt/extra-addons 
 
-#Set permissions
+#Enabling the odoo account, setting a home directory for it and setting access permissions to other folders
 ARG PUID=1000
 ARG PGID=1000
 
-RUN groupmod -o -g "$PGID" odoo \
+RUN chsh -s /bin/bash odoo \
+    && mkhomedir_helper odoo \ 
+    && groupmod -o -g "$PGID" odoo \
     && usermod -o -u "$PUID" odoo \
     && echo "odoo ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers \
     && echo -e  "odoo\nodoo" | passwd odoo \
-    && chown -R odoo:odoo /home/config \
-    && chown -R odoo:odoo /mnt/extra-addons
+    && chown -R odoo:odoo /mnt/extra-addons \
+    && chown -R odoo:odoo /usr/lib/python3/dist-packages/odoo
 
 # Mount /var/lib/odoo to allow restoring filestore, /mnt/extra-addons for users addons and config for configurations files
-VOLUME ["/var/lib/odoo", "/mnt/extra-addons", "/home/config"]
+VOLUME ["/var/lib/odoo", "/mnt/extra-addons"]
 
 # Expose Odoo services
 EXPOSE 8069 8071 8072
