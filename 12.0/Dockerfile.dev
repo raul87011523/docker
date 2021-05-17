@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:18.04
 MAINTAINER Odoo S.A. <info@odoo.com>
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
@@ -21,7 +21,7 @@ ENV HOME="/home/odoo"
 # Generate locale C.UTF-8 for postgres and general locale data
 ENV LANG C.UTF-8
 
-# INstall and config tzdata
+# Install and config tzdata
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install tzdata
 ENV TZ=America/Argentina/Buenos_Aires
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
@@ -32,8 +32,6 @@ RUN apt-get update \
         && apt-get install -y --no-install-recommends \
             sudo \
             vim \
-            ripgrep \
-            npm \
             build-essential \
             swig \
             git \
@@ -42,9 +40,9 @@ RUN apt-get update \
             dirmngr \
             fonts-noto-cjk \
             gnupg \
-            libssl-dev \
+            libssl1.0-dev \
             node-less \
-            python3-num2words \
+            npm \
             python3-pip \
             python3-phonenumbers \
             python3-pyldap \
@@ -55,24 +53,27 @@ RUN apt-get update \
             python3-vobject \
             python3-watchdog \
             python3-xlrd \
-            python3-xlwt \
             xz-utils \
             python3-dev \
             python3-wheel \
-        && curl -o wkhtmltox.deb -sSL https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.focal_amd64.deb \
+        && curl -o wkhtmltox.deb -sSL https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.bionic_amd64.deb \
         && apt-get install -y --no-install-recommends ./wkhtmltox.deb \
         && rm -rf /var/lib/apt/lists/* wkhtmltox.deb \
-        && git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install --all
+        && curl -o ripgrep_12.1.1_amd64.deb -sSL https://github.com/BurntSushi/ripgrep/releases/download/12.1.1/ripgrep_12.1.1_amd64.deb \
+        && apt-get install -y --no-install-recommends ./ripgrep_12.1.1_amd64.deb \
+        && rm -rf /var/lib/apt/lists/* ripgrep_12.1.1_amd64.deb \
+        && git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf 2> /dev/null || git -C ~/.fzf pull \
+		&& ~/.fzf/install --all
 
 # Install extra libs
-RUN pip3 install -U debugpy pysftp polib unicodecsv unidecode email_validator erppeek pylint
+RUN pip3 install -U debugpy num2words xlwt cryptography==3.3.2 pysftp polib unicodecsv unidecode email_validator erppeek pylint
 
 # install latest postgresql-client
 RUN apt-get update \
-    && apt-get install --no-install-recommends -y postgresql postgresql-contrib
+    && apt-get install --no-install-recommends -y postgresql postgresql-client
 
 # Install rtlcss
-RUN npm install -g rtlcss
+RUN npm install -g less less-plugin-clean-css
 
 # Install Odoo
 ENV ODOO_VERSION 12.0
