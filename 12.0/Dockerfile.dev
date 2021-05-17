@@ -63,7 +63,7 @@ RUN apt-get update \
         && apt-get install -y --no-install-recommends ./ripgrep_12.1.1_amd64.deb \
         && rm -rf /var/lib/apt/lists/* ripgrep_12.1.1_amd64.deb \
         && git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf 2> /dev/null || git -C ~/.fzf pull \
-		&& ~/.fzf/install --all
+    		&& ~/.fzf/install --all
 
 # Install extra libs
 RUN pip3 install -U debugpy num2words xlwt cryptography==3.3.2 pysftp polib unicodecsv unidecode email_validator erppeek pylint
