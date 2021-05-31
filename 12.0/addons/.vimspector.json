@@ -1,0 +1,21 @@
+{
+  "configurations": {
+    "Odoo: Launch": {
+      "adapter": "debugpy",
+      "configuration": {
+        "name": "Odoo: Launch",
+        "type": "python",
+        "request": "launch",
+        "cwd": "${workspaceRoot}",
+        "python": "/usr/bin/python3",
+        "stopOnEntry": true,
+        "console": "externalTerminal",
+        "debugOptions": [],
+        "program": "/usr/bin/odoo",
+        "args": [
+          "--config", "/home/odoo/workspace/Project/odoo.conf"
+        ]
+      }
+    }
+  }
+}
