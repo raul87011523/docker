@@ -62,6 +62,12 @@ RUN apt-get update \
         && curl -o wkhtmltox.deb -sSL https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.focal_amd64.deb \
         && apt-get install -y --no-install-recommends ./wkhtmltox.deb \
         && rm -rf /var/lib/apt/lists/* wkhtmltox.deb \
+        && curl -o ripgrep_12.1.1_amd64.deb -sSL https://github.com/BurntSushi/ripgrep/releases/download/12.1.1/ripgrep_12.1.1_amd64.deb \
+        && apt-get install -y --no-install-recommends ./ripgrep_12.1.1_amd64.deb \
+        && rm -rf /var/lib/apt/lists/* ripgrep_12.1.1_amd64.deb \
+        && curl -o bat_0.18.1_amd64.deb -sSL https://github.com/sharkdp/bat/releases/download/v0.18.1/bat_0.18.1_amd64.deb \
+        && apt-get install -y --no-install-recommends ./bat_0.18.1_amd64.deb \
+        && rm -rf /var/lib/apt/lists/* bat_0.18.1_amd64.deb \
         && git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf 2> /dev/null || git -C ~/.fzf pull \
         && ~/.fzf/install --all
 
