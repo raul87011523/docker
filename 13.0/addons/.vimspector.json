@@ -13,7 +13,7 @@
         "debugOptions": [],
         "program": "/usr/bin/odoo",
         "args": [
-          "--config", "/home/odoo/workspace/Project/odoo.conf"
+          "--config", "/home/odoo/workspace/b2b21/odoo.conf"
         ]
       }
     }
